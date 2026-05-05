@@ -302,35 +302,37 @@
     </div>
 
     <script>
-        // ==================== 热更新模块 ====================
+  // ==================== 热更新模块（终极稳定版） ====================
         (async function() {
-            const VERSION_URL = 'https://ykk.nimbuxx.com/version.json';
-            const GAME_URL = 'https://ykk.nimbuxx.com/game.html';
-            const LOCAL_VER = localStorage.getItem('game_version') || '0.0';
-            const CACHE_KEY = 'game_html_cache';
+            // 【请替换成你自己的信息】
+            const CURRENT_VERSION = '0.07'; // 当前App内置的版本号
+            const GITHUB_USER = 'yangkaikai56-dev'; // 你的GitHub用户名
+            const GITHUB_REPO = 'kaikaixiuxianlu'; // 你的GitHub仓库名
+
+            const VERSION_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@latest/version.json`;
+            const GAME_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@latest/game.html`;
+            
+            const CACHE_VER_KEY = 'game_version';
 
             try {
-                let resp = await fetch(VERSION_URL);
-                let data = await resp.json();
-                let remoteVer = data.version;
+                // 1. 获取远程最新版本号
+                const resp = await fetch(VERSION_URL + '?t=' + Date.now());
+                const data = await resp.json();
+                const remoteVer = data.version;
 
-                if (remoteVer !== LOCAL_VER) {
-                    let htmlResp = await fetch(GAME_URL);
-                    let newHTML = await htmlResp.text();
-                    localStorage.setItem(CACHE_KEY, newHTML);
-                    localStorage.setItem('game_version', remoteVer);
-                    alert('游戏已更新到 v' + remoteVer + '，请重启应用生效！');
-                }
+                // 2. 获取本地版本号
+                const localVer = localStorage.getItem(CACHE_VER_KEY) || CURRENT_VERSION;
 
-                let cachedHTML = localStorage.getItem(CACHE_KEY);
-                if (cachedHTML) {
-                    document.open();
-                    document.write(cachedHTML);
-                    document.close();
-                    return;
+                // 3. 如果远程版本更新，直接使用远程地址刷新页面
+                if (remoteVer !== localVer) {
+                    alert('发现新版本 v' + remoteVer + '，正在为您升级，请稍候...');
+                    localStorage.setItem(CACHE_VER_KEY, remoteVer);
+                    // 核心修改：不再缓存，直接跳转到最新的线上地址，强制刷新
+                    window.location.href = GAME_URL + '?t=' + Date.now();
+                    return; // 阻止旧代码继续执行
                 }
             } catch (e) {
-                console.log('更新检查失败，使用本地版本', e);
+                console.log('更新检查失败，继续使用本地版本', e);
             }
         })();
         // ==================== 热更新模块结束 ====================
