@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开开修仙录 - 文字修仙模拟器 v0.07</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #050510; color: #f0e6d2;
+            font-family: "PingFang SC", "微软雅黑", sans-serif;
+            padding: 15px 15px 80px 15px; line-height: 1.6; min-height: 100vh;
+        }
+        .container {
+            max-width: 500px; margin: 0 auto; background: #101025;
+            padding: 25px; border-radius: 20px; border: 2px solid #d4af37;
+            box-shadow: 0 0 35px rgba(212, 175, 55, 0.25); position: relative;
+        }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+        h1 { color: #ffd700; text-shadow: 0 0 12px #ffd700; font-size: 26px; margin: 0; }
+        .gear-btn {
+            background: transparent; border: none; color: #d4af37; font-size: 24px;
+            cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+        }
+        .gear-btn:hover { background: rgba(212,175,55,0.2); }
+        .gear-dropdown {
+            display: none; position: absolute; top: 60px; right: 20px;
+            background: #181835; border: 2px solid #d4af37; border-radius: 12px;
+            padding: 12px; z-index: 10; min-width: 140px; flex-direction: column; gap: 8px;
+        }
+        .gear-dropdown.show { display: flex; }
+        .gear-dropdown button {
+            padding: 10px 14px; background: #26264f; color: #f0e6d2;
+            border: 1px solid #bfa66f; border-radius: 8px; cursor: pointer; text-align: left;
+        }
+        .gear-dropdown button:hover { background: #3a3a7a; }
+        h3, h4 { color: #ffd700; margin-bottom: 10px; }
+        .status-box { background: #181835; padding: 20px; border-radius: 14px; margin-bottom: 18px; border: 1px solid #bfa66f; }
+        .status-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; font-size: 16px; }
+        .label-col { flex-shrink: 0; }
+        .value-col { display: flex; align-items: center; gap: 6px; }
+        .edit-name-btn { background: transparent; border: none; color: #d4af37; cursor: pointer; font-size: 14px; }
+        .toggle-stats-btn { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #c9a84c; font-size: 13px; padding: 8px 0; border-top: 1px dashed rgba(212,175,55,0.25); margin-top: 10px; }
+        .arrow-icon { display: inline-block; transition: transform 0.45s; font-size: 11px; }
+        .arrow-icon.rotated { transform: rotate(-180deg); }
+        .advanced-stats-wrapper { overflow: hidden; max-height: 300px; opacity: 1; transition: 0.3s; }
+        .advanced-stats-wrapper.collapsed { max-height: 0; opacity: 0; margin: 0; }
+        .log-box {
+            background: #0c0c1f; padding: 13px 15px; border-radius: 10px; height: 125px;
+            overflow-y: auto; border: 1px solid #6b5a40; margin-bottom: 18px; font-size: 14px;
+        }
+        .log-box::-webkit-scrollbar { width: 4px; }
+        .log-box::-webkit-scrollbar-thumb { background: #4a3f2f; border-radius: 2px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+        button {
+            padding: 14px 10px; background: #26264f; color: #f0e6d2; border: 1px solid #d4af37;
+            border-radius: 10px; cursor: pointer; font-size: 15px; transition: 0.25s;
+        }
+        button:hover { background: #3a3a7a; box-shadow: 0 0 10px #ffd700; transform: translateY(-2px); }
+        button:disabled { background: #1a1a2a; color: #666; border-color: #444; cursor: not-allowed; box-shadow: none; transform: none; }
+        .log-title { color: #ffd700; margin-bottom: 8px; font-size: 15px; }
+        .tip { color: #888; font-size: 14px; margin-top: 12px; text-align: center; }
+        .tower-scene { display: none; }
+        .level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 20px 0; }
+        .battle-box { background: #181835; padding: 22px; border-radius: 14px; margin: 20px 0; border: 1px solid #d4af37; }
+        .battle-status { margin-bottom: 15px; }
+        .battle-actions { max-height: 200px; overflow-y: auto; padding-right: 5px; }
+        .skill-btn, .battle-act-btn { margin: 6px; padding: 12px 18px; border-radius: 8px; }
+        .hp-bar { width: 100%; height: 22px; background: #222; border-radius: 11px; margin: 8px 0; overflow: hidden; border: 1px solid #555; }
+        .hp-fill { height: 100%; background: linear-gradient(90deg, #ff4757, #e74c3c); transition: width 0.3s; }
+        .hp-fill.dead { background: #444 !important; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: #101025; border: 2px solid #d4af37; border-radius: 16px; padding: 25px;
+            max-width: 400px; width: 90%; color: #f0e6d2; box-shadow: 0 0 30px rgba(212,175,55,0.5);
+            text-align: center; max-height: 85vh; overflow-y: auto;
+        }
+        .modal-box h2 { color: #ffd700; margin-bottom: 15px; font-size: 22px; }
+        .fullscreen-panel {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050510; z-index: 300; overflow-y: auto; color: #f0e6d2;
+        }
+        .fullscreen-panel.active { display: block; }
+        .panel-header {
+            position: sticky; top: 0; z-index: 5; background: #101025;
+            padding: 15px 20px; display: flex; align-items: center; gap: 15px;
+            border-bottom: 1px solid #d4af37; margin-bottom: 20px;
+        }
+        .panel-header button { background: transparent; border: 1px solid #d4af37; color: #ffd700; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+        .panel-content { padding: 0 20px 40px; }
+        .skill-item { background: #1a1a3a; border: 1px solid #d4af37; border-radius: 8px; padding: 10px 15px; margin: 8px 0; text-align: left; }
+        .skill-name { font-weight: bold; color: #ffd700; display: flex; justify-content: space-between; align-items: center; }
+        .skill-desc { color: #ccc; font-size: 13px; margin: 6px 0; }
+        .skill-cost { color: #ffaa00; font-size: 12px; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+        .shake { animation: shake 0.3s; }
+        .auto-indicator { color: #ffaa00; font-weight: bold; margin: 10px 0; display: flex; align-items: center; gap: 10px; }
+        @keyframes pulse { 0%{opacity:1} 50%{opacity:0.5} 100%{opacity:1} }
+        .auto-text { animation: pulse 1s infinite; }
+        .cheat-btn { background: #6a1b9a; border-color: #e040fb; font-weight: bold; margin: 8px 0; transition: 0.2s; box-shadow: 0 0 15px #e040fb55; }
+        .cheat-btn:hover { background: #8e24aa; box-shadow: 0 0 25px #e040fb; }
+        .boss-fight {
+            border: 3px solid #ff4444 !important; box-shadow: 0 0 25px #ff0000aa !important;
+            animation: bossGlow 1.5s infinite alternate;
+        }
+        @keyframes bossGlow { from{box-shadow:0 0 20px #ff0000} to{box-shadow:0 0 45px #ff0000} }
+        .boss-name { color: #ff2222; text-shadow: 0 0 10px #ff0000; }
+        .battle-fullscreen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050510; z-index: 200; padding: 20px; overflow-y: auto; flex-direction: column; align-items: center;
+        }
+        .battle-fullscreen.active { display: flex; }
+        .equipment-card { background: #1a1a3a; border: 1px solid #bfa66f; border-radius: 10px; padding: 12px; margin: 10px 0; }
+        .equipment-card.locked { opacity: 0.5; background: #12122a; }
+        .equipment-slot {
+            background: #0c0c1f; border: 1px solid #6b5a40; border-radius: 6px; padding: 8px; margin: 6px 0;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .equipment-slot:hover { background: #2a2a5a; }
+        .unequip-icon { color: #ff4444; font-weight: bold; margin-left: 10px; }
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; background: #101025;
+            border-top: 2px solid #d4af37; padding: 15px; display: flex; justify-content: center; z-index: 50;
+        }
+        .bottom-bar button { padding: 10px 20px; background: #1a1a3a; color: #f0e6d2; border: 1px solid #d4af37; border-radius: 8px; cursor: pointer; }
+        .function-panel {
+            display: none; position: fixed; bottom: 70px; left: 0; right: 0;
+            background: #0c0c1f; border-top: 2px solid #d4af37; padding: 20px; z-index: 400; max-height: 300px; overflow-y: auto;
+        }
+        .function-panel.active { display: block; }
+        .float-reward {
+            display: none; position: fixed; top: 20px; right: 10px; background: #1a1a3a;
+            border: 1px solid #ffd700; border-radius: 8px; padding: 8px 12px;
+            z-index: 250; color: #ffd700; font-size: 13px; max-width: 200px; word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <!-- 公告弹窗 -->
+    <div class="modal-overlay" id="announceModal" style="display: none;">
+        <div class="modal-box">
+            <h2>📢 公告</h2>
+            <div class="announce-content">当前版本为v0.08 <br>· 云更新测试<br>反馈qq+1565273604</div>
+            <label><input type="checkbox" id="noRemindToday">今日不再提示</label>
+            <button class="close-btn" onclick="closeAnnounce()">我知道了</button>
+        </div>
+    </div>
+    <!-- 更新日志面板 -->
+    <div class="fullscreen-panel" id="updatePanel">
+        <div class="panel-header"><button onclick="closeFullPanel('updatePanel')">← 返回</button><h2>📋 更新日志</h2></div>
+        <div class="panel-content" id="updateLogContent"></div>
+    </div>
+    <!-- 独立面板：技能与装备 -->
+    <div class="fullscreen-panel" id="skillEquipPanel">
+        <div class="panel-header"><button onclick="closeFullPanel('skillEquipPanel')">← 返回</button><h2>📦 技能与装备</h2></div>
+        <div class="panel-content" style="display:flex; gap:20px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <h3>技能列表</h3>
+                <div>灵力：<span id="skillPanelLingli">0</span>/<span id="skillPanelMaxLingli">0</span></div>
+                <div>技能槽位：<span id="skillPanelSlots">0</span></div>
+                <div id="skillPanelContainer"></div>
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <h3>当前装备</h3>
+                <div id="equipmentSlots"></div>
+                <h4 style="margin-top:20px;">装备仓库</h4>
+                <div id="equipmentInventory"></div>
+            </div>
+        </div>
+    </div>
+    <!-- 独立面板：炼丹 -->
+    <div class="fullscreen-panel" id="alchemyPanel">
+        <div class="panel-header"><button onclick="closeFullPanel('alchemyPanel')">← 返回</button><h2>🏺 炼丹炉</h2></div>
+        <div class="panel-content">
+            <div>材料：<span id="mat0">0</span>灵气草 | <span id="mat1">0</span>血精石 | <span id="mat2">0</span>妖兽骨 | <span id="mat3">0</span>天劫碎片</div>
+            <div style="margin:15px 0;">
+                <button onclick="craftPill(0)">炼制回灵丹 (灵气草×3)</button>
+                <button onclick="craftPill(1)">炼制续命丹 (血精石×3)</button>
+                <button onclick="craftPill(2)">炼制修为丹 (妖兽骨×5)</button>
+                <button onclick="craftPill(3)">渡劫护心丹 (天劫碎片×2)</button>
+            </div>
+        </div>
+    </div>
+    <!-- 独立面板：活动 -->
+    <div class="fullscreen-panel" id="activityPanel">
+        <div class="panel-header"><button onclick="closeFullPanel('activityPanel')">← 返回</button><h2>📋 每日任务</h2></div>
+        <div class="panel-content" id="dailyTasks"></div>
+    </div>
+    <!-- GM弹窗 -->
+    <div class="modal-overlay blur-bg" id="gmModal" style="display: none;">
+        <div class="modal-box" style="border-color:#e040fb; box-shadow:0 0 40px #e040fb77;">
+            <h2 style="color:#e040fb;">🔮 GM模式</h2><div id="gmContent"></div>
+            <button class="close-btn" onclick="closeGMModal()" style="margin-top:15px;">退出</button>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div class="container main-scene" id="mainScene">
+        <div class="header-row">
+            <h1>开开修仙录</h1>
+            <button class="gear-btn" onclick="toggleGearMenu()">⚙️</button>
+        </div>
+        <div class="gear-dropdown" id="gearMenu">
+            <button onclick="exportSave(); toggleGearMenu();">💾 导出存档</button>
+            <button onclick="importSave(); toggleGearMenu();">📥 导入存档</button>
+            <button onclick="openGM(); toggleGearMenu();">🔮 GM选项</button>
+            <button onclick="clearSave(); toggleGearMenu();">🔴 重置游戏</button>
+        </div>
+        <div class="status-box">
+            <div class="status-row"><span class="label-col">姓名</span><span class="value-col"><span id="name">开开</span><button class="edit-name-btn" onclick="editName()">✏️</button></span></div>
+            <div class="status-row"><span class="label-col">灵根</span><span class="value-col" id="linggen">凡品灵根</span></div>
+            <div class="status-row"><span class="label-col">境界</span><span class="value-col" id="level">炼气一层</span></div>
+            <div class="status-row"><span class="label-col">修为</span><span class="value-col" id="xiuwei">0 / 100</span></div>
+            <div class="status-row"><span class="label-col">灵力</span><span class="value-col" id="lingliShow">0 / 0</span></div>
+            <div class="toggle-stats-btn" onclick="toggleAdvancedStats()"><span>战斗属性</span><span class="arrow-icon" id="arrowIcon">▼</span></div>
+            <div class="advanced-stats-wrapper" id="advancedStatsWrapper">
+                <div class="advanced-stats-inner">
+                    <div class="status-row"><span class="label-col">攻击力</span><span class="value-col" id="atkShow">0</span></div>
+                    <div class="status-row"><span class="label-col">防御力</span><span class="value-col" id="defShow">0</span></div>
+                    <div class="status-row"><span class="label-col">减伤比例</span><span class="value-col" id="dmgReduceShow">0%</span></div>
+                    <div class="status-row"><span class="label-col">闪避概率</span><span class="value-col" id="dodgeShow">0%</span></div>
+                    <div class="status-row"><span class="label-col">暴击率</span><span class="value-col" id="critShow">0%</span></div>
+                    <div class="status-row"><span class="label-col">暴击伤害</span><span class="value-col" id="critDmgShow">0%</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="log-title">📜 修仙日志</div>
+        <div class="log-box" id="log">欢迎来到开开修仙录，从此踏上长生之路！</div>
+        <div class="btn-group"><button onclick="cultivate()">打坐修炼</button><button onclick="breakThrough()">突破境界</button></div>
+        <div class="btn-group"><button onclick="dujie()">渡劫试炼</button><button onclick="openTower()">试炼爬塔</button></div>
+        <div class="tip">提示：打坐积累修为、恢复灵力，突破变强，爬塔获取更多修为！</div>
+    </div>
+
+    <!-- 底部功能栏 -->
+    <div class="bottom-bar"><button onclick="toggleFunctionPanel()">📦 功能</button></div>
+
+    <!-- 功能弹出面板 -->
+    <div class="function-panel" id="functionPanel">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+            <button onclick="openFullPanel('skillEquipPanel'); toggleFunctionPanel();">📦 技能装备</button>
+            <button onclick="openFullPanel('alchemyPanel'); toggleFunctionPanel();">🏺 炼丹</button>
+            <button onclick="openFullPanel('activityPanel'); toggleFunctionPanel();">📋 活动</button>
+            <button onclick="openFullPanel('updatePanel'); toggleFunctionPanel();">📋 更新日志</button>
+        </div>
+        <button onclick="toggleFunctionPanel()" style="margin-top:10px;">关闭</button>
+    </div>
+
+    <!-- 试炼爬塔界面 -->
+    <div class="container tower-scene" id="towerScene">
+        <h1>🗼 试炼爬塔</h1>
+        <button onclick="closeTower()">← 返回宗门</button>
+        <h3 style="margin:15px 0">选择层数</h3>
+        <div class="level-list" id="levelList"></div>
+    </div>
+
+    <!-- 独立战斗界面 -->
+    <div class="battle-fullscreen" id="battleFullscreen">
+        <div style="max-width:500px; width:100%;">
+            <button onclick="tryExitBattle()">← 返回层数选择</button>
+            <div class="battle-box" id="battleBox">
+                <div class="battle-status">
+                    <h3 id="enemyName">对手</h3>
+                    <div><span>敌方血量：</span><div class="hp-bar"><div class="hp-fill" id="enemyHpBar" style="width:100%"></div></div><span id="enemyHpText">100/100</span></div>
+                    <div style="margin-top:15px;"><span>我方血量：</span><div class="hp-bar"><div class="hp-fill" id="playerHpBar" style="width:100%"></div></div><span id="playerHpText">100/100</span></div>
+                    <div style="margin-top:10px; color:#ffd700;">灵力：<span id="battleLingli">0</span>/<span id="battleMaxLingli">0</span></div>
+                </div>
+                <div class="battle-actions">
+                    <h4>选择行动：</h4>
+                    <button class="battle-act-btn" onclick="playerAction('attack')">攻击</button>
+                    <button class="battle-act-btn" onclick="playerAction('defend')">防御</button>
+                    <span id="skillBtnsContainer"></span>
+                </div>
+                <div id="autoControl" class="auto-indicator" style="display:none;">
+                    <span class="auto-text">自动刷新中...</span>
+                    <button onclick="stopAuto()" style="background:#8b0000;">停止自动</button>
+                </div>
+                <div class="log-title">⚔️ 战斗记录</div>
+                <div class="log-box" id="battleLog" style="height:100px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 浮动自动累积奖励弹窗 -->
+    <div class="float-reward" id="floatReward">⚡自动累积：<span id="floatTrackerText"></span></div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal-overlay" id="victoryModal" style="display: none;">
+        <div class="modal-box">
+            <h2>🎉 战斗胜利</h2>
+            <div id="victoryMsg"></div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                <button onclick="victoryAction('again')">再来一次 (当前层)</button>
+                <button onclick="victoryAction('next')" id="victoryNextBtn">下一关</button>
+                <button onclick="victoryAction('autoRepeat')">⚔️ 自动重复本层</button>
+                <button onclick="victoryAction('close')" class="close-btn" style="background:#444;">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 热更新模块 ====================
+        (async function() {
+            const VERSION_URL = 'https://ykk.nimbuxx.com/version.json';
+            const GAME_URL = 'https://ykk.nimbuxx.com/game.html';
+            const LOCAL_VER = localStorage.getItem('game_version') || '0.0';
+            const CACHE_KEY = 'game_html_cache';
+
+            try {
+                let resp = await fetch(VERSION_URL);
+                let data = await resp.json();
+                let remoteVer = data.version;
+
+                if (remoteVer !== LOCAL_VER) {
+                    let htmlResp = await fetch(GAME_URL);
+                    let newHTML = await htmlResp.text();
+                    localStorage.setItem(CACHE_KEY, newHTML);
+                    localStorage.setItem('game_version', remoteVer);
+                    alert('游戏已更新到 v' + remoteVer + '，请重启应用生效！');
+                }
+
+                let cachedHTML = localStorage.getItem(CACHE_KEY);
+                if (cachedHTML) {
+                    document.open();
+                    document.write(cachedHTML);
+                    document.close();
+                    return;
+                }
+            } catch (e) {
+                console.log('更新检查失败，使用本地版本', e);
+            }
+        })();
+        // ==================== 热更新模块结束 ====================
+
+        // ===== 基础工具 =====
+        const getTodayStr = () => { let d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
+        const addLog = (t) => { let b = document.getElementById("log"); b.innerHTML += "<br>" + t; b.scrollTop = b.scrollHeight; };
+        const addBattleLog = (t) => { let b = document.getElementById("battleLog"); b.innerHTML += "<br>" + t; b.scrollTop = b.scrollHeight; };
+        const formatNum = (n) => n.toFixed(2);
+        function toggleGearMenu() { document.getElementById("gearMenu").classList.toggle("show"); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('.gear-btn') && !e.target.closest('#gearMenu')) document.getElementById("gearMenu").classList.remove("show"); });
+        let advancedStatsExpanded = true;
+        function toggleAdvancedStats() { advancedStatsExpanded = !advancedStatsExpanded; document.getElementById('advancedStatsWrapper').classList.toggle('collapsed', !advancedStatsExpanded); document.getElementById('arrowIcon').classList.toggle('rotated', !advancedStatsExpanded); localStorage.setItem('advancedStatsExpanded', advancedStatsExpanded ? '1' : '0'); }
+        function editName() { let n = prompt('新道号：', player.name); if (n && n.trim()) { player.name = n.trim(); updateUI(); saveGame(); addLog(`✨ 道号：${player.name}`); } }
+        function showAnnounceModal() { if (localStorage.getItem("announceClosedDate") !== getTodayStr()) { document.getElementById("announceModal").style.display = "flex"; document.getElementById("noRemindToday").checked = false; } }
+        function closeAnnounce() { if (document.getElementById("noRemindToday").checked) localStorage.setItem("announceClosedDate", getTodayStr()); document.getElementById("announceModal").style.display = "none"; }
+        function closeGMModal() { document.getElementById("gmModal").style.display = "none"; }
+        function openFullPanel(id) { document.getElementById(id).classList.add("active"); if (id === 'updatePanel') showUpdateContent(); if (id === 'skillEquipPanel') renderSkillEquipPanel(); if (id === 'alchemyPanel') updateAlchemyPanel(); if (id === 'activityPanel') showActivity(); }
+        function closeFullPanel(id) { document.getElementById(id).classList.remove("active"); }
+        function toggleFunctionPanel() { document.getElementById("functionPanel").classList.toggle("active"); }
+        function showUpdateContent() {
+            document.getElementById("updateLogContent").innerHTML = `
+                <div style="margin-bottom:10px;"><strong>v0.02</strong><br>· 灵根系统全面更改<br>· 修复小怪血量显示异常<br>· 新增更新日志<br>· 新增技能系统（半成品）<br>&nbsp;&nbsp;[2026.5.4]</div>
+                <div style="margin-bottom:10px;"><strong>v0.03</strong><br>· 新增折叠属性<br>· 优化修行ui界面<br>· 完善技能系统<br>· 新增技能+10<br>· 平调技能机制<br>· 重做“外出冒险” 新增“试炼爬塔”<br>· 优化战斗逻辑<br>· 增加自动战斗模式<br>· 修复自动战斗模式无法攻击<br>· 将存档功能全部转移至右上角齿轮<br>· 支持自定义改名<br>&nbsp;&nbsp;[2026.5.5]</div>
+                <div style="margin-bottom:10px;"><strong>v0.04</strong><br>· 重做渡劫系统<br>· 修复修为溢出后被强制调整的问题<br>· 优化战斗UI<br>· 修复战斗日志显示不全的问题<br>· 修改GM选项增加修为为自定义<br>· 增加GM选项自选灵根<br>· 增加GM选项恢复灵力<br>· 调整灵力恢复<br>· 优化渡劫显示<br>· 增加试炼爬塔重复功能<br>· 删除调息<br>&nbsp;&nbsp;[2026.5.5]</div>
+                <div style="margin-bottom:10px;"><strong>v0.05</strong><br>· 境界扩充至20阶（化神、大乘、飞升）<br>· 爬塔层数增至51层，新增彩蛋BOSS<br>· 新增炼丹系统<br>· 新增材料系统<br>· 新增每日任务活动<br>· 重平衡灵力与渡劫消耗<br>· 修炼回灵下调，挂机回灵下调<br>· 战斗胜利回灵降低<br>· 自动重复模式奖励提示优化<br>· 增强彩蛋BOSS开开【肘击】技能伤害<br>· 优化战斗UI<br>· 调整爬塔平衡<br>· 新增30关<br>&nbsp;&nbsp;[2026.5.5]</div>
+                <div style="margin-bottom:10px;"><strong>v0.06</strong><br>· 底部新增功能面板，收纳技能装备、炼丹、活动、更新日志<br>· 优化战斗UI，独立战斗界面，未行动可退出<br>· 新增装备系统，通过爬塔层数概率掉落装备部件，重复转化为修为<br>· 装备仓库按部件显示，详细属性与锁定状态<br>· 点击装备栏直接卸下<br>· 修复元婴期无法突破、渡劫护心丹无效等遗留Bug<br>· 实装全部装备特效（暴击、爆伤、减伤、流血等）<br>· 小怪增加暴击/爆伤/减伤/流血属性<br>· 玩家随境界成长获得基础暴击/爆伤/减伤<br>· 彩蛋BOSS开开获得50%暴击/爆伤/流血<br>· 所有装备掉落概率提升15%<br>&nbsp;&nbsp;[2026.5.5]</div>
+                <div style="margin-bottom:10px;"><strong>v0.07</strong><br>· 增加云更新功能!!!<br>&nbsp;&nbsp;[2026.5.5]</div>
+                <div style="margin-bottom:10px;"><strong>v0.08</strong><br>· 测试云更新，此版本意义重大将完结此版本更新<br>&nbsp;&nbsp;[2026.5.5]</div>
+            `;
+        }
+        // ===== 挂机灵力 =====
+        let naturalRegenInterval = null;
+        function startNaturalRegen() { if (naturalRegenInterval) clearInterval(naturalRegenInterval); naturalRegenInterval = setInterval(() => { if (player.lingli < player.maxLingli) { player.lingli = Math.min(player.lingli + Math.floor(player.maxLingli * 0.03), player.maxLingli); updateUI(); } }, 30000); }
+        // ===== GM =====
+        function openGM() { let gmContent = document.getElementById("gmContent"); let unlocked = localStorage.getItem("gmUnlocked") === "true"; if (!unlocked) { gmContent.innerHTML = `<p>请输入GM密码</p><input type="password" id="gmPassword" placeholder="GM密码" style="width:80%; padding:10px; border-radius:8px; border:1px solid #e040fb; background:#12122a; color:#fff; margin-bottom:12px;"><button onclick="verifyGMPassword()" style="background:#6a1b9a; border-color:#e040fb;">确认</button>`; } else { showGMCheats(); } document.getElementById("gmModal").style.display = "flex"; }
+        function verifyGMPassword() { if (document.getElementById("gmPassword").value === "641520") { localStorage.setItem("gmUnlocked", "true"); showGMCheats(); } else { alert("密码错误"); } }
+        function showGMCheats() { document.getElementById("gmContent").innerHTML = `<p style="color:#e040fb;">✨ 作弊选项已解锁</p><button class="cheat-btn" onclick="cheatCustomXiuwei()">自定义增加修为</button><button class="cheat-btn" onclick="cheatLevelUp()">提升一个境界</button><button class="cheat-btn" onclick="cheatSelectLinggen()">自选灵根</button>`; }
+        function cheatCustomXiuwei() { let input = prompt("请输入要增加的修为数值：", "5000"); let amount = parseInt(input); if (isNaN(amount) || amount <= 0) { alert("请输入一个有效的正整数"); return; } player.xiuwei += amount; addLog(`🔮 GM：增加 ${amount} 修为`); updateUI(); saveGame(); closeGMModal(); }
+        function cheatLevelUp() { if (player.level >= player.levelList.length - 1) { addLog("🔮 GM：已达最高境界"); return; } player.level++; player.xiuwei = 0; player.maxXiuwei = Math.floor(player.maxXiuwei * 1.8); let a = levelAttr[player.level]; let m = linggenMultiplier[player.linggen] || 1; player.maxHp = a.hp; player.hp = a.hp; player.atk = Math.floor(a.atk * m); player.def = Math.floor(a.def * m); player.maxLingli = calcMaxLingli(); player.lingli = player.maxLingli; addLog(`🔮 GM：境界提升至 ${player.levelList[player.level]}`); addRandomSkill(); updateUI(); saveGame(); closeGMModal(); }
+        function cheatSelectLinggen() { let optHtml = '选择灵根：<br>'; linggenList.forEach((ling) => { optHtml += `<button onclick="applyLinggen('${ling}')" class="cheat-btn" style="margin:4px;">${ling}</button>`; }); document.getElementById("gmContent").innerHTML = optHtml + '<br><button onclick="showGMCheats()" style="margin-top:10px;">返回</button>'; }
+        function applyLinggen(ling) { player.linggen = ling; let a = levelAttr[player.level]; let m = linggenMultiplier[ling] || 1; player.atk = Math.floor(a.atk * m); player.def = Math.floor(a.def * m); player.maxLingli = calcMaxLingli(); player.lingli = player.maxLingli; addLog(`🔮 GM：灵根更换为 ${ling}`); updateUI(); saveGame(); showGMCheats(); }
+        // ===== 存档 =====
+        const SECRET_KEY = "KaikaiXiuXian_2025_Secret";
+        function encrypt(d) { try { let s = JSON.stringify(d), e = encodeURIComponent(s), r = ""; for (let i=0; i<e.length; i++) r += String.fromCharCode(e.charCodeAt(i) + SECRET_KEY.charCodeAt(i % SECRET_KEY.length) % 20); return btoa(btoa(r)); } catch(e) { return null; } }
+        function decrypt(c) { try { let s = atob(atob(c)), r = ""; for (let i=0; i<s.length; i++) r += String.fromCharCode(s.charCodeAt(i) - SECRET_KEY.charCodeAt(i % SECRET_KEY.length) % 20); return JSON.parse(decodeURIComponent(r)); } catch(e) { return null; } }
+        function saveGame() { let e = encrypt(player); if (e) localStorage.setItem("xxk_save_safe", e); }
+        function loadGame() {
+            let d = localStorage.getItem("xxk_save_safe"); if (!d) return false;
+            let dec = decrypt(d); if (!dec) return false;
+            if (dec.skills && dec.skills.length > 0 && typeof dec.skills[0] === 'string') { let migrated = []; dec.skills.forEach(skillName => { let found = skillData.find(p => p.name === skillName); if (found) migrated.push({ id: found.id, name: found.name }); }); dec.skills = migrated; }
+            if (dec.equippedSkills && dec.equippedSkills.length > 0 && typeof dec.equippedSkills[0] === 'string') { let migrated = []; dec.equippedSkills.forEach(skillName => { let found = skillData.find(p => p.name === skillName); if (found) migrated.push({ id: found.id, name: found.name }); }); dec.equippedSkills = migrated; }
+            Object.assign(player, dec);
+            player.levelList = ["炼气一层","炼气二层","炼气三层","炼气四层","炼气五层","炼气六层","炼气七层","炼气八层","炼气九层","筑基初期","筑基中期","筑基后期","金丹初期","金丹中期","金丹后期","元婴","化神初期","化神中期","化神后期","大乘初期","大乘后期","渡劫飞升"];
+            if (!player.skills) player.skills = []; if (!player.equippedSkills) player.equippedSkills = [];
+            if (!player.materials) player.materials = [0,0,0,0];
+            if (!player.dailyTasks) player.dailyTasks = { date: getTodayStr(), progress: [0,0,0], claimed: false };
+            if (!player.equippedItems) player.equippedItems = {}; if (!player.unlockedEquipParts) player.unlockedEquipParts = [];
+            let btCount = player.level; let expectedSkills = 1 + btCount; let ownedCount = player.skills.length;
+            if (ownedCount < expectedSkills) { let missing = Math.min(expectedSkills - ownedCount, skillData.length - ownedCount); let compensated = 0; for (let i = 0; i < missing; i++) { let available = skillData.filter(s => !player.skills.some(ps => ps.id === s.id)); if (available.length === 0) break; let newSkill = available[Math.floor(Math.random() * available.length)]; player.skills.push({ id: newSkill.id, name: newSkill.name }); compensated++; } if (compensated > 0) { addLog(`✨ 系统补偿 ${compensated} 个技能`); saveGame(); } }
+            player.maxLingli = calcMaxLingli(); if (player.lingli === undefined || player.lingli > player.maxLingli) player.lingli = player.maxLingli;
+            updateUI(); addLog("♻️ 已加载存档"); return true;
+        }
+        function exportSave() { let c = encrypt(player); if (!c) { alert("存档加密失败"); return; } if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(c).then(() => { addLog("✅ 存档已复制到剪贴板"); alert("存档码已复制到剪贴板。"); }).catch(() => { promptCopy(c); }); } else { promptCopy(c); } }
+        function promptCopy(code) { window.prompt("请手动复制存档码：", code); addLog("📋 请手动复制存档码"); }
+        function importSave() { let code = prompt("请粘贴存档码："); if (!code) return; let d = decrypt(code); if (!d) return alert("❌ 存档无效"); Object.assign(player, d); if (!player.skills) player.skills = []; if (!player.equippedSkills) player.equippedSkills = []; if (!player.materials) player.materials = [0,0,0,0]; if (!player.dailyTasks) player.dailyTasks = { date: getTodayStr(), progress: [0,0,0], claimed: false }; if (!player.equippedItems) player.equippedItems = {}; if (!player.unlockedEquipParts) player.unlockedEquipParts = []; saveGame(); updateUI(); addLog("✅ 导入成功"); }
+        function clearSave() { if (confirm("确认重置？")) { localStorage.removeItem("xxk_save_safe"); localStorage.removeItem("advancedStatsExpanded"); location.reload(); } }
+        // ===== 技能数据 =====
+        const skillData = [
+            { id: 0, name: "吐纳术", desc: "恢复最大生命15%", cost: 20, maxUses: 0, effect: (b) => { let heal = Math.floor(player.maxHp * 0.15); b.playerCurHp = Math.min(player.maxHp, b.playerCurHp + heal); addBattleLog(`吐纳术：恢复${heal}生命`); } },
+            { id: 1, name: "御风术", desc: "本回合闪避提升至50%", cost: 25, maxUses: 0, effect: (b) => { b.playerDodgeBuff = 0.5; addBattleLog("御风术：闪避提升至50%"); } },
+            { id: 2, name: "破甲击", desc: "130%攻击伤害，无视20%防御", cost: 30, maxUses: 0, effect: (b) => { let dmg = Math.max(1, Math.floor(player.atk * 1.3) - Math.floor(b.enemy.def * 0.8) + Math.floor(Math.random()*5)); b.enemyCurHp = Math.max(0, b.enemyCurHp - dmg); addBattleLog(`破甲击：${formatNum(dmg)}伤害`); } },
+            { id: 3, name: "灵甲术", desc: "本回合受到伤害减少50%", cost: 25, maxUses: 0, effect: (b) => { b.playerDmgReduceBuff = 0.5; addBattleLog("灵甲术：减伤50%"); } },
+            { id: 4, name: "回春术", desc: "恢复最大生命20%", cost: 35, maxUses: 0, effect: (b) => { let heal = Math.floor(player.maxHp * 0.2); b.playerCurHp = Math.min(player.maxHp, b.playerCurHp + heal); addBattleLog(`回春术：恢复${heal}生命`); } },
+            { id: 5, name: "雷击", desc: "160%伤害，反噬5%生命 (限2)", cost: 40, maxUses: 2, effect: (b) => { let dmg = Math.max(1, Math.floor(player.atk * 1.6) - b.enemy.def + Math.floor(Math.random()*5)); b.enemyCurHp = Math.max(0, b.enemyCurHp - dmg); addBattleLog(`雷击：${formatNum(dmg)}伤害`); let self = Math.floor(b.playerCurHp * 0.05); b.playerCurHp = Math.max(1, b.playerCurHp - self); addBattleLog(`雷击反噬自身${self}生命`); } },
+            { id: 6, name: "冰霜咒", desc: "80%伤害，冻结敌人1回合 (限2)", cost: 35, maxUses: 2, effect: (b) => { let dmg = Math.max(1, Math.floor(player.atk * 0.8) - b.enemy.def + Math.floor(Math.random()*5)); b.enemyCurHp = Math.max(0, b.enemyCurHp - dmg); b.enemyStunned = true; addBattleLog(`冰霜咒：${formatNum(dmg)}伤害，冻结敌人`); } },
+            { id: 7, name: "烈焰斩", desc: "150%伤害", cost: 35, maxUses: 0, effect: (b) => { let dmg = Math.max(1, Math.floor(player.atk * 1.5) - b.enemy.def + Math.floor(Math.random()*5)); b.enemyCurHp = Math.max(0, b.enemyCurHp - dmg); addBattleLog(`烈焰斩：${formatNum(dmg)}伤害`); } },
+            { id: 8, name: "金刚体", desc: "本回合减伤80% (限1)", cost: 45, maxUses: 1, effect: (b) => { b.playerDmgReduceBuff = 0.8; addBattleLog("金刚体：减伤80%"); } },
+            { id: 9, name: "幻影步", desc: "本回合闪避提升至80% (限2)", cost: 40, maxUses: 2, effect: (b) => { b.playerDodgeBuff = 0.8; addBattleLog("幻影步：闪避提升至80%"); } }
+        ];
+        // ===== 装备部件数据（含特效，掉落概率已提升15%） =====
+        const allEquipParts = [
+            { id:"t1_head", name:"铁盔", slot:"head", atk:1, def:2, tier:1, minFloor:5, maxFloor:9, effect:"" },
+            { id:"t1_chest", name:"铁甲", slot:"chest", def:4, tier:1, minFloor:5, maxFloor:9, effect:"" },
+            { id:"t1_legs", name:"铁护腿", slot:"legs", def:2, tier:1, minFloor:5, maxFloor:9, effect:"" },
+            { id:"t1_neck", name:"铁项链", slot:"neck", def:1, hp:10, tier:1, minFloor:5, maxFloor:9, effect:"" },
+            { id:"t1_ring", name:"铁戒指", slot:"ring", atk:2, tier:1, minFloor:5, maxFloor:9, effect:"" },
+            { id:"t1_weapon", name:"铁剑", slot:"weapon", atk:3, tier:1, minFloor:5, maxFloor:9, effect:"" },
+            { id:"t2_head", name:"青铜盔", slot:"head", atk:2, def:3, tier:2, minFloor:10, maxFloor:14, effect:"critRate:1" },
+            { id:"t2_chest", name:"青铜铠", slot:"chest", atk:1, def:5, tier:2, minFloor:10, maxFloor:14, effect:"dmgReduce:2" },
+            { id:"t2_legs", name:"青铜护腿", slot:"legs", def:3, tier:2, minFloor:10, maxFloor:14, effect:"dodgeRate:1" },
+            { id:"t2_neck", name:"青铜链", slot:"neck", def:2, hp:20, tier:2, minFloor:10, maxFloor:14, effect:"" },
+            { id:"t2_ring", name:"青铜戒", slot:"ring", atk:3, tier:2, minFloor:10, maxFloor:14, effect:"flatDmg:10" },
+            { id:"t2_weapon", name:"青铜矛", slot:"weapon", atk:4, def:1, tier:2, minFloor:10, maxFloor:14, effect:"" },
+            { id:"t3_head", name:"赤银冠", slot:"head", atk:3, def:4, tier:3, minFloor:15, maxFloor:19, effect:"critDmg:10" },
+            { id:"t3_chest", name:"赤银甲", slot:"chest", atk:2, def:6, tier:3, minFloor:15, maxFloor:19, effect:"lowHpReduce:5" },
+            { id:"t3_legs", name:"赤银腿甲", slot:"legs", def:4, tier:3, minFloor:15, maxFloor:19, effect:"" },
+            { id:"t3_neck", name:"赤银坠", slot:"neck", def:3, hp:30, tier:3, minFloor:15, maxFloor:19, effect:"startHeal:5" },
+            { id:"t3_ring", name:"赤银戒", slot:"ring", atk:4, tier:3, minFloor:15, maxFloor:19, effect:"ignoreDef:2" },
+            { id:"t3_weapon", name:"赤银剑", slot:"weapon", atk:5, def:1, tier:3, minFloor:15, maxFloor:19, effect:"bleed:10" },
+            { id:"t4_head", name:"玄金盔", slot:"head", atk:4, def:5, tier:4, minFloor:20, maxFloor:24, effect:"critDef:10" },
+            { id:"t4_chest", name:"玄金铠", slot:"chest", atk:3, def:7, tier:4, minFloor:20, maxFloor:24, effect:"reflect:20:5" },
+            { id:"t4_legs", name:"玄金护腿", slot:"legs", def:5, tier:4, minFloor:20, maxFloor:24, effect:"dodgeRate:2" },
+            { id:"t4_neck", name:"玄金链", slot:"neck", def:4, hp:40, tier:4, minFloor:20, maxFloor:24, effect:"deathSave:30:10" },
+            { id:"t4_ring", name:"玄金戒", slot:"ring", atk:5, tier:4, minFloor:20, maxFloor:24, effect:"atkPercent:5" },
+            { id:"t4_weapon", name:"玄金矛", slot:"weapon", atk:6, def:2, tier:4, minFloor:20, maxFloor:24, effect:"flatDmg:50" },
+            { id:"t5_head", name:"灵器冠", slot:"head", atk:5, def:6, tier:5, minFloor:25, maxFloor:99, effect:"skillCostReduce:10" },
+            { id:"t5_chest", name:"灵器袍", slot:"chest", atk:4, def:8, tier:5, minFloor:25, maxFloor:99, effect:"dmgReduce:3" },
+            { id:"t5_legs", name:"灵器腿甲", slot:"legs", def:6, tier:5, minFloor:25, maxFloor:99, effect:"" },
+            { id:"t5_neck", name:"灵器坠", slot:"neck", def:5, hp:50, tier:5, minFloor:25, maxFloor:99, effect:"healOnHit:5:5" },
+            { id:"t5_ring", name:"灵器戒", slot:"ring", atk:6, tier:5, minFloor:25, maxFloor:99, effect:"reduceEnemyAtk:10:2" },
+            { id:"t5_weapon", name:"灵器剑", slot:"weapon", atk:7, def:2, tier:5, minFloor:25, maxFloor:99, effect:"rage:100:15" }
+        ];
+        function getEquipDropChance(floor) {
+            if (floor >= 5 && floor <= 9) return 0.40;   // 原25% +15%
+            if (floor >= 10 && floor <= 14) return 0.35; // 原20% +15%
+            if (floor >= 15 && floor <= 19) return 0.30; // 原15% +15%
+            if (floor >= 20 && floor <= 24) return 0.27; // 原12% +15%
+            if (floor >= 25) return 0.25;                // 原10% +15%
+            return 0;
+        }
+        // ===== 玩家境界基础属性 =====
+        const levelBonusStats = [
+            {critRate:0, critDmg:0, dmgReduce:0},{critRate:0, critDmg:0, dmgReduce:0},{critRate:0, critDmg:0, dmgReduce:0},{critRate:0, critDmg:0, dmgReduce:0},
+            {critRate:1, critDmg:0, dmgReduce:0},{critRate:1, critDmg:0, dmgReduce:0},{critRate:1, critDmg:1, dmgReduce:0},{critRate:1, critDmg:1, dmgReduce:0},
+            {critRate:2, critDmg:1, dmgReduce:0},{critRate:2, critDmg:1, dmgReduce:1},{critRate:2, critDmg:2, dmgReduce:1},{critRate:3, critDmg:2, dmgReduce:1},
+            {critRate:3, critDmg:2, dmgReduce:2},{critRate:3, critDmg:3, dmgReduce:2},{critRate:4, critDmg:3, dmgReduce:2},{critRate:4, critDmg:3, dmgReduce:3},
+            {critRate:4, critDmg:4, dmgReduce:3},{critRate:5, critDmg:4, dmgReduce:3},{critRate:5, critDmg:4, dmgReduce:4},{critRate:5, critDmg:5, dmgReduce:4},
+            {critRate:6, critDmg:5, dmgReduce:4},{critRate:6, critDmg:5, dmgReduce:5}
+        ];
+        // ===== 玩家数据 =====
+        let player = {
+            name: "开开", linggen: "凡品灵根", level: 0, xiuwei: 0, maxXiuwei: 100,
+            hp: 100, maxHp: 100, atk: 10, def: 5, maxLevelUnlocked: 0,
+            lingli: 100, maxLingli: 100, skills: [], equippedSkills: [],
+            materials: [0,0,0,0], dailyTasks: { date: getTodayStr(), progress: [0,0,0], claimed: false },
+            levelList: ["炼气一层","炼气二层","炼气三层","炼气四层","炼气五层","炼气六层","炼气七层","炼气八层","炼气九层","筑基初期","筑基中期","筑基后期","金丹初期","金丹中期","金丹后期","元婴","化神初期","化神中期","化神后期","大乘初期","大乘后期","渡劫飞升"],
+            equippedItems: {}, unlockedEquipParts: []
+        };
+        const levelAttr = [
+            { hp:100, atk:10, def:5 }, { hp:125, atk:12, def:6 }, { hp:155, atk:15, def:7 }, { hp:190, atk:18, def:9 },
+            { hp:230, atk:22, def:11 }, { hp:275, atk:26, def:13 }, { hp:330, atk:31, def:16 }, { hp:395, atk:37, def:19 },
+            { hp:465, atk:43, def:22 }, { hp:550, atk:50, def:26 }, { hp:645, atk:58, def:30 }, { hp:755, atk:67, def:35 },
+            { hp:880, atk:77, def:40 }, { hp:1025, atk:88, def:46 }, { hp:1190, atk:100, def:52 }, { hp:1380, atk:113, def:59 },
+            { hp:1600, atk:128, def:67 }, { hp:1850, atk:145, def:76 }, { hp:2150, atk:163, def:86 }, { hp:2500, atk:183, def:97 },
+            { hp:2900, atk:205, def:109 }, { hp:3400, atk:230, def:122 }
+        ];
+        const linggenList = ["凡品灵根","良品灵根","上品灵根","极品灵根","先天灵根","混沌灵根"];
+        const linggenMultiplier = { "凡品灵根":1.0, "良品灵根":1.2, "上品灵根":1.4, "极品灵根":1.8, "先天灵根":2.4, "混沌灵根":3.0 };
+        const linggenCultivateRange = { "凡品灵根":{min:1.0,max:1.0}, "良品灵根":{min:1.0,max:1.2}, "上品灵根":{min:1.0,max:1.4}, "极品灵根":{min:1.0,max:1.8}, "先天灵根":{min:1.0,max:2.4}, "混沌灵根":{min:1.0,max:3.0} };
+        const towerFloors = [
+            { name:"一层·山间小妖", hp:110, atk:11, def:5, dodge:0.08, reward:100, critRate:0, critDmg:0, dmgReduce:0, bleed:0 },
+            { name:"二层·黑风狼妖", hp:145, atk:14, def:7, dodge:0.10, reward:150, critRate:0, critDmg:0, dmgReduce:0, bleed:0 },
+            { name:"三层·青蛇精", hp:185, atk:17, def:9, dodge:0.12, reward:210, critRate:1, critDmg:0, dmgReduce:0, bleed:0 },
+            { name:"四层·骨魔", hp:235, atk:21, def:11, dodge:0.14, reward:280, critRate:1, critDmg:0, dmgReduce:1, bleed:0 },
+            { name:"五层·树妖长老", hp:295, atk:25, def:14, dodge:0.16, reward:360, critRate:2, critDmg:1, dmgReduce:1, bleed:0 },
+            { name:"六层·炎兽", hp:365, atk:30, def:17, dodge:0.18, reward:450, critRate:2, critDmg:1, dmgReduce:1, bleed:0 },
+            { name:"七层·水妖统领", hp:445, atk:36, def:20, dodge:0.20, reward:560, critRate:3, critDmg:1, dmgReduce:2, bleed:0 },
+            { name:"八层·金鳞兽", hp:535, atk:42, def:24, dodge:0.22, reward:690, critRate:3, critDmg:2, dmgReduce:2, bleed:0 },
+            { name:"九层·玄冰魔", hp:635, atk:49, def:28, dodge:0.24, reward:840, critRate:4, critDmg:2, dmgReduce:2, bleed:0 },
+            { name:"十层·秘境霸主", hp:750, atk:56, def:32, dodge:0.26, reward:1000, critRate:5, critDmg:3, dmgReduce:3, bleed:5 },
+            { name:"十一层·噬魂兽", hp:880, atk:64, def:37, dodge:0.28, reward:1200, critRate:5, critDmg:3, dmgReduce:3, bleed:0 },
+            { name:"十二层·血魔", hp:1020, atk:73, def:42, dodge:0.30, reward:1450, critRate:6, critDmg:4, dmgReduce:3, bleed:8 },
+            { name:"十三层·妖王", hp:1180, atk:83, def:48, dodge:0.32, reward:1720, critRate:7, critDmg:4, dmgReduce:4, bleed:0 },
+            { name:"十四层·雷鹰", hp:1360, atk:94, def:54, dodge:0.34, reward:2020, critRate:7, critDmg:5, dmgReduce:4, bleed:0 },
+            { name:"十五层·地龙", hp:1560, atk:106, def:61, dodge:0.36, reward:2360, critRate:8, critDmg:5, dmgReduce:5, bleed:0 },
+            { name:"十六层·幻魔", hp:1780, atk:119, def:69, dodge:0.38, reward:2740, critRate:8, critDmg:6, dmgReduce:5, bleed:0 },
+            { name:"十七层·天魔", hp:2030, atk:133, def:77, dodge:0.40, reward:3160, critRate:9, critDmg:6, dmgReduce:6, bleed:0 },
+            { name:"十八层·古神", hp:2310, atk:148, def:86, dodge:0.42, reward:3630, critRate:9, critDmg:7, dmgReduce:6, bleed:0 },
+            { name:"十九层·混沌兽", hp:2620, atk:165, def:96, dodge:0.44, reward:4150, critRate:10, critDmg:7, dmgReduce:7, bleed:0 },
+            { name:"二十层·飞升之劫", hp:2970, atk:183, def:107, dodge:0.46, reward:4720, critRate:12, critDmg:8, dmgReduce:8, bleed:10 },
+            { name:"？？？", hp:11451419, atk:0, def:0, dodge:0.05, reward:114514, isBoss:true, critRate:50, critDmg:50, dmgReduce:0, bleed:50 },
+            { name:"二十一层·幽冥鬼将", hp:3360, atk:203, def:119, dodge:0.47, reward:5360, critRate:12, critDmg:9, dmgReduce:9, bleed:0 },
+            { name:"二十二层·九头蛇", hp:3790, atk:225, def:132, dodge:0.48, reward:6050, critRate:13, critDmg:9, dmgReduce:9, bleed:8 },
+            { name:"二十三层·灭世魔龙", hp:4270, atk:249, def:146, dodge:0.49, reward:6810, critRate:13, critDmg:10, dmgReduce:10, bleed:0 },
+            { name:"二十四层·天剑尊者", hp:4800, atk:275, def:161, dodge:0.50, reward:7630, critRate:14, critDmg:10, dmgReduce:10, bleed:0 },
+            { name:"二十五层·万毒蛛皇", hp:5390, atk:303, def:177, dodge:0.51, reward:8520, critRate:14, critDmg:11, dmgReduce:10, bleed:12 },
+            { name:"二十六层·修罗战将", hp:6040, atk:333, def:194, dodge:0.52, reward:9480, critRate:15, critDmg:11, dmgReduce:11, bleed:0 },
+            { name:"二十七层·鬼面罗刹", hp:6760, atk:366, def:212, dodge:0.53, reward:10510, critRate:15, critDmg:12, dmgReduce:11, bleed:0 },
+            { name:"二十八层·不死凤凰", hp:7540, atk:401, def:231, dodge:0.54, reward:11620, critRate:16, critDmg:12, dmgReduce:12, bleed:0 },
+            { name:"二十九层·远古泰坦", hp:8400, atk:439, def:251, dodge:0.55, reward:12810, critRate:16, critDmg:13, dmgReduce:13, bleed:0 },
+            { name:"三十层·虚空行者", hp:9340, atk:480, def:272, dodge:0.56, reward:14080, critRate:17, critDmg:13, dmgReduce:13, bleed:0 },
+            { name:"三十一层·暗影君王", hp:10370, atk:524, def:294, dodge:0.57, reward:15440, critRate:17, critDmg:14, dmgReduce:14, bleed:0 },
+            { name:"三十二层·雷霆之主", hp:11490, atk:572, def:317, dodge:0.58, reward:16890, critRate:18, critDmg:14, dmgReduce:14, bleed:0 },
+            { name:"三十三层·深渊领主", hp:12710, atk:624, def:341, dodge:0.59, reward:18430, critRate:18, critDmg:15, dmgReduce:15, bleed:10 },
+            { name:"三十四层·不朽巫妖", hp:14040, atk:680, def:366, dodge:0.60, reward:20070, critRate:19, critDmg:15, dmgReduce:15, bleed:0 },
+            { name:"三十五层·灭法者", hp:15480, atk:741, def:392, dodge:0.61, reward:21820, critRate:19, critDmg:16, dmgReduce:16, bleed:0 },
+            { name:"三十六层·万剑归宗", hp:17050, atk:807, def:419, dodge:0.62, reward:23680, critRate:20, critDmg:16, dmgReduce:16, bleed:0 },
+            { name:"三十七层·混沌魔神", hp:18750, atk:878, def:447, dodge:0.63, reward:25660, critRate:20, critDmg:17, dmgReduce:17, bleed:0 },
+            { name:"三十八层·星界巨兽", hp:20600, atk:955, def:476, dodge:0.64, reward:27760, critRate:21, critDmg:17, dmgReduce:17, bleed:0 },
+            { name:"三十九层·时空裂缝", hp:22600, atk:1038, def:506, dodge:0.65, reward:29990, critRate:21, critDmg:18, dmgReduce:18, bleed:0 },
+            { name:"四十层·创世神侍", hp:24780, atk:1128, def:537, dodge:0.66, reward:32350, critRate:22, critDmg:18, dmgReduce:19, bleed:0 },
+            { name:"四十一层·次元蠕虫", hp:27140, atk:1226, def:569, dodge:0.67, reward:34850, critRate:22, critDmg:19, dmgReduce:19, bleed:0 },
+            { name:"四十二层·绝灭大君", hp:29710, atk:1332, def:602, dodge:0.68, reward:37500, critRate:23, critDmg:19, dmgReduce:20, bleed:12 },
+            { name:"四十三层·万法归墟", hp:32500, atk:1446, def:636, dodge:0.69, reward:40310, critRate:23, critDmg:20, dmgReduce:20, bleed:0 },
+            { name:"四十四层·永恒之火", hp:35530, atk:1569, def:671, dodge:0.70, reward:43280, critRate:24, critDmg:20, dmgReduce:21, bleed:0 },
+            { name:"四十五层·虚空大君", hp:38820, atk:1702, def:707, dodge:0.71, reward:46420, critRate:24, critDmg:21, dmgReduce:21, bleed:0 },
+            { name:"四十六层·天命之子", hp:42390, atk:1846, def:744, dodge:0.72, reward:49740, critRate:25, critDmg:21, dmgReduce:22, bleed:0 },
+            { name:"四十七层·法则化身", hp:46270, atk:2001, def:782, dodge:0.73, reward:53240, critRate:25, critDmg:22, dmgReduce:22, bleed:0 },
+            { name:"四十八层·破灭意志", hp:50480, atk:2169, def:821, dodge:0.74, reward:56940, critRate:26, critDmg:22, dmgReduce:23, bleed:0 },
+            { name:"四十九层·源初混沌", hp:55050, atk:2351, def:861, dodge:0.75, reward:60840, critRate:26, critDmg:23, dmgReduce:24, bleed:0 },
+            { name:"五十层·超脱之境", hp:60000, atk:2548, def:902, dodge:0.76, reward:64960, critRate:28, critDmg:25, dmgReduce:25, bleed:15 }
+        ];
+        function getMaxSkillSlots(l) { return l>=18?6:l>=12?5:l>=9?4:l>=6?3:l>=3?2:1; }
+        function calcMaxLingli() { return Math.floor(100 * (linggenMultiplier[player.linggen]||1) + player.level*8); }
+        function getEquipBonus() { let a=0,d=0,h=0; for(let s in player.equippedItems){ let i=player.equippedItems[s]; if(i){ a+=i.atk||0; d+=i.def||0; h+=i.hp||0; } } return {atk:a,def:d,hp:h}; }
+        function getEquipEffects() {
+            let effects = {critRate:0, critDmg:0, dmgReduce:0, dodgeRate:0, flatDmg:0, bleed:0, ignoreDef:0, atkPercent:0, skillCostReduce:0,
+                startHeal:0, lowHpReduce:0, critDef:0, reflectRate:0, reflectPercent:0, deathSaveHp:0, deathSavePercent:0, healOnHitCount:0, healOnHitPercent:0, reduceEnemyAtk:0, reduceEnemyAtkDuration:0, rageDmg:0, rageChance:0};
+            for(let s in player.equippedItems){
+                let item = player.equippedItems[s]; if(!item) continue;
+                let p = allEquipParts.find(p=>p.id===item.id); if(!p||!p.effect) continue;
+                let parts = p.effect.split(':');
+                if(parts[0]==='critRate') effects.critRate += parseInt(parts[1])||0;
+                else if(parts[0]==='critDmg') effects.critDmg += parseInt(parts[1])||0;
+                else if(parts[0]==='dmgReduce') effects.dmgReduce += parseInt(parts[1])||0;
+                else if(parts[0]==='dodgeRate') effects.dodgeRate += parseInt(parts[1])||0;
+                else if(parts[0]==='flatDmg') effects.flatDmg += parseInt(parts[1])||0;
+                else if(parts[0]==='bleed') effects.bleed = Math.max(effects.bleed, parseInt(parts[1])||0);
+                else if(parts[0]==='ignoreDef') effects.ignoreDef += parseInt(parts[1])||0;
+                else if(parts[0]==='atkPercent') effects.atkPercent += parseInt(parts[1])||0;
+                else if(parts[0]==='skillCostReduce') effects.skillCostReduce += parseInt(parts[1])||0;
+                else if(parts[0]==='startHeal') effects.startHeal = Math.max(effects.startHeal, parseInt(parts[1])||0);
+                else if(parts[0]==='lowHpReduce') effects.lowHpReduce = Math.max(effects.lowHpReduce, parseInt(parts[1])||0);
+                else if(parts[0]==='critDef') effects.critDef += parseInt(parts[1])||0;
+                else if(parts[0]==='reflect'){ effects.reflectRate = parseInt(parts[1])||0; effects.reflectPercent = parseInt(parts[2])||0; }
+                else if(parts[0]==='deathSave'){ effects.deathSaveHp = parseInt(parts[1])||0; effects.deathSavePercent = parseInt(parts[2])||0; }
+                else if(parts[0]==='healOnHit'){ effects.healOnHitCount = parseInt(parts[1])||0; effects.healOnHitPercent = parseInt(parts[2])||0; }
+                else if(parts[0]==='reduceEnemyAtk'){ effects.reduceEnemyAtk = parseInt(parts[1])||0; effects.reduceEnemyAtkDuration = parseInt(parts[2])||0; }
+                else if(parts[0]==='rage'){ effects.rageDmg = parseInt(parts[1])||0; effects.rageChance = parseInt(parts[2])||0; }
+            }
+            return effects;
+        }
+        function updateUI() {
+            document.getElementById("name").innerText = player.name; document.getElementById("linggen").innerText = player.linggen;
+            document.getElementById("level").innerText = player.levelList[player.level];
+            document.getElementById("xiuwei").innerText = `${player.xiuwei}/${player.maxXiuwei}`;
+            document.getElementById("lingliShow").innerText = `${player.lingli}/${player.maxLingli}`;
+            let b = getEquipBonus(); let e = getEquipEffects(); let lbs = levelBonusStats[player.level]||{critRate:0,critDmg:0,dmgReduce:0};
+            document.getElementById("atkShow").innerText = player.atk + b.atk;
+            document.getElementById("defShow").innerText = player.def + b.def;
+            let reduce = Math.min((player.def+b.def)/200*100, 50);
+            document.getElementById("dmgReduceShow").innerText = Math.round(reduce) + "%";
+            let dodge = Math.min(5 + (player.def+b.def)/500*100, 50);
+            document.getElementById("dodgeShow").innerText = Math.round(dodge) + "%";
+            document.getElementById("critShow").innerText = Math.min(lbs.critRate + e.critRate, 50) + "%";
+            document.getElementById("critDmgShow").innerText = Math.min(lbs.critDmg + e.critDmg, 200) + "%";
+        }
+        function randomLinggen() { let r = Math.random(); player.linggen = r<0.4?linggenList[0]:r<0.7?linggenList[1]:r<0.88?linggenList[2]:r<0.96?linggenList[3]:r<0.99?linggenList[4]:linggenList[5]; }
+        function addRandomSkill() { let avl = skillData.filter(s=>!player.skills.some(ps=>ps.id===s.id)); if(avl.length>0){ let ns = avl[Math.floor(Math.random()*avl.length)]; player.skills.push({id:ns.id,name:ns.name}); addLog(`🎓 习得新技能：${ns.name}`); saveGame(); } }
+        function cultivate() {
+            if(player.xiuwei>=player.maxXiuwei){ let lr=Math.floor(player.maxLingli*0.05); player.lingli=Math.min(player.lingli+lr,player.maxLingli); addLog(`打坐：修为已满，仅恢复${lr}灵力`); }
+            else { let m=linggenCultivateRange[player.linggen]?.min+Math.random()*(linggenCultivateRange[player.linggen]?.max-linggenCultivateRange[player.linggen]?.min)||1; let add=Math.floor(10*m); player.xiuwei+=add; let lr=Math.floor(player.maxLingli*0.05); player.lingli=Math.min(player.lingli+lr,player.maxLingli); addLog(`打坐+${add}修为，+${lr}灵力`); }
+            updateUI(); saveGame(); updateDailyProgress(0);
+        }
+        function breakThrough() {
+            if(player.xiuwei<player.maxXiuwei) return addLog("修为不足");
+            if(player.level>=player.levelList.length-1) return addLog("已满级");
+            let m=linggenMultiplier[player.linggen]||1;
+            if(Math.random()<0.6+m*0.1){ player.level++; let left=player.xiuwei-player.maxXiuwei; player.xiuwei=Math.max(0,left); player.maxXiuwei=Math.floor(player.maxXiuwei*1.8); let a=levelAttr[player.level]; player.maxHp=a.hp; player.hp=a.hp; player.atk=Math.floor(a.atk*m); player.def=Math.floor(a.def*m); player.maxLingli=calcMaxLingli(); player.lingli=player.maxLingli; addLog(`🎉突破成功：${player.levelList[player.level]}`); addRandomSkill(); }
+            else { player.xiuwei=Math.floor(player.xiuwei*0.5); addLog("突破失败，修为减半"); }
+            updateUI(); saveGame();
+        }
+        function dujie() {
+            if(player.level<9) return addLog("筑基后可渡劫");
+            let cost=Math.floor((player.level>=12?50:30)+player.maxLingli*(player.level>=12?0.15:0.1));
+            if(player.lingli<cost) return addLog(`灵力不足${cost}，无法渡劫`);
+            player.lingli-=cost; addLog(`⚡渡劫试炼：消耗${cost}灵力`);
+            let old=player.xiuwei;
+            if(Math.random()<0.35+(linggenMultiplier[player.linggen]||1)*0.12){ let gain=Math.floor(player.maxXiuwei*0.3); player.xiuwei+=gain; addLog(`渡劫成功！获得${gain}修为`); }
+            else { let loss=Math.floor(old*0.7); player.xiuwei=Math.floor(old*0.3); player.lingli=Math.max(0,player.lingli-Math.floor(player.maxLingli*0.1)); addLog(`渡劫失败，扣除${loss}修为，反噬${Math.floor(player.maxLingli*0.1)}灵力`); }
+            updateUI(); saveGame(); updateDailyProgress(1);
+        }
+        function updateAlchemyPanel() { document.getElementById("mat0").innerText=player.materials[0]; document.getElementById("mat1").innerText=player.materials[1]; document.getElementById("mat2").innerText=player.materials[2]; document.getElementById("mat3").innerText=player.materials[3]; }
+        function craftPill(type) {
+            let cost=[[3,0,0,0],[0,3,0,0],[0,0,5,0],[0,0,0,2]][type]; if(!cost.every((c,i)=>player.materials[i]>=c)) return alert("材料不足");
+            for(let i=0;i<4;i++) player.materials[i]-=cost[i];
+            if(type===0){ let r=Math.floor(player.maxLingli*0.3); player.lingli=Math.min(player.lingli+r,player.maxLingli); addLog(`服下回灵丹，恢复${r}灵力`); }
+            else if(type===1){ player.hp=Math.min(player.maxHp,player.hp+Math.floor(player.maxHp*0.4)); addLog(`服下续命丹，恢复生命`); }
+            else if(type===2){ player.xiuwei+=50; addLog(`服下修为丹，修为+50`); }
+            else if(type===3){ addLog(`服用渡劫护心丹，下次渡劫失败不扣灵力`); }
+            updateUI(); saveGame(); closeFullPanel('alchemyPanel');
+        }
+        function showActivity() { let d=player.dailyTasks; if(d.date!==getTodayStr()){d.date=getTodayStr();d.progress=[0,0,0];d.claimed=false;} let h=''; h+=`<p>修炼3次：${d.progress[0]}/3 ${d.progress[0]>=3?'✅':''}</p>`; h+=`<p>渡劫1次：${d.progress[1]}/1 ${d.progress[1]>=1?'✅':''}</p>`; h+=`<p>爬塔5层：${d.progress[2]}/5 ${d.progress[2]>=5?'✅':''}</p>`; if(!d.claimed&&d.progress.every(p=>p>=[3,1,5][d.progress.indexOf(p)]))h+=`<button onclick="claimDailyReward()">领取奖励</button>`; else if(d.claimed)h+=`<p>奖励已领取</p>`; document.getElementById("dailyTasks").innerHTML=h; }
+        function updateDailyProgress(t){let d=player.dailyTasks;if(d.date!==getTodayStr()){d.date=getTodayStr();d.progress=[0,0,0];d.claimed=false;}if(t===0)d.progress[0]=Math.min(3,d.progress[0]+1);if(t===1&&d.progress[1]<1)d.progress[1]=1;if(t===2)d.progress[2]=Math.min(5,d.progress[2]+1);saveGame();}
+        function claimDailyReward(){player.materials[0]+=3;player.materials[1]+=3;player.materials[2]+=2;player.dailyTasks.claimed=true;addLog("✅ 领取每日奖励");saveGame();closeFullPanel('activityPanel');}
+        function renderSkillEquipPanel() {
+            document.getElementById("skillPanelLingli").innerText=player.lingli; document.getElementById("skillPanelMaxLingli").innerText=player.maxLingli;
+            let maxSlots=getMaxSkillSlots(player.level); document.getElementById("skillPanelSlots").innerText=player.equippedSkills.length+'/'+maxSlots;
+            let skillHtml=''; player.skills.forEach(s=>{ let data=skillData.find(d=>d.id===s.id); if(!data)return; let eq=player.equippedSkills.some(e=>e.id===s.id); skillHtml+=`<div class="skill-item"><div class="skill-name"><span>${data.name}</span><button onclick="${eq?'unequipSkill('+s.id+')':'equipSkill('+s.id+')'}" ${!eq&&player.equippedSkills.length>=maxSlots?'disabled':''}>${eq?'卸下':'装备'}</button></div><div class="skill-desc">${data.desc}</div><div class="skill-cost">灵力${data.cost} ${data.maxUses>0?'次数'+data.maxUses:'无限'}</div></div>`; });
+            document.getElementById("skillPanelContainer").innerHTML=skillHtml;
+            let slotNames={weapon:'武器',head:'头部',chest:'胸甲',legs:'腿部',neck:'项链',ring:'戒指'};
+            let slotsHtml=''; for(let s in slotNames){ let item=player.equippedItems[s]; let dsp=item?`${item.name} +${item.atk||0}攻 +${item.def||0}防`:''; slotsHtml+=`<div class="equipment-slot" onclick="${item?'unequipItem(\''+s+'\')':'void(0)'}"><span>${slotNames[s]}</span><span>${dsp}</span>${item?'<span class="unequip-icon">✕</span>':''}</div>`; }
+            document.getElementById("equipmentSlots").innerHTML='<h4>当前装备</h4>'+slotsHtml;
+            let invHtml=''; let unlockedIds = player.unlockedEquipParts || [];
+            if(unlockedIds.length===0) invHtml='<p>暂无解锁装备</p>';
+            else {
+                let tierNames = ["凡铁","青铜","赤银","玄金","灵器"];
+                for(let tier=1; tier<=5; tier++){
+                    let parts = allEquipParts.filter(p => p.tier===tier && unlockedIds.includes(p.id));
+                    if(parts.length===0) continue;
+                    invHtml += `<div class="equipment-card"><h4>${tierNames[tier-1]}部件</h4>`;
+                    parts.forEach(p => {
+                        invHtml += `<p><strong>${p.name}</strong> (${slotNames[p.slot]}) 攻+${p.atk||0} 防+${p.def||0} ${p.effect?'<br><small style="color:#ffaa00;">'+p.effect+'</small>':''} <button onclick="equipItem('${p.id}')">装备</button></p>`;
+                    });
+                    invHtml += `</div>`;
+                }
+            }
+            document.getElementById("equipmentInventory").innerHTML=invHtml;
+        }
+        function equipSkill(id){ if(player.equippedSkills.length>=getMaxSkillSlots(player.level))return; if(!player.equippedSkills.some(e=>e.id===id)){let s=player.skills.find(k=>k.id===id);if(s)player.equippedSkills.push({id:s.id,name:s.name});} saveGame(); renderSkillEquipPanel(); }
+        function unequipSkill(id){ player.equippedSkills=player.equippedSkills.filter(e=>e.id!==id); saveGame(); renderSkillEquipPanel(); }
+        function equipItem(partId){ let part = allEquipParts.find(p => p.id === partId); if(!part || !player.unlockedEquipParts.includes(partId)) return; player.equippedItems[part.slot] = {name:part.name,atk:part.atk||0,def:part.def||0,hp:part.hp||0, id:partId}; saveGame(); renderSkillEquipPanel(); updateUI(); }
+        function unequipItem(slot){ delete player.equippedItems[slot]; saveGame(); renderSkillEquipPanel(); updateUI(); }
+        // ===== 战斗状态 =====
+        let battle = {
+            inBattle:false, floorIndex:-1, enemy:{}, playerCurHp:0, enemyCurHp:0,
+            isDefending:false, locked:false, skillUseCount:{}, enemyStunned:false,
+            playerDodgeBuff:null, playerDmgReduceBuff:null, autoMode:false, autoTimer:null,
+            autoRepeat:false, bossRevealed:false, actionTaken:false,
+            accumulated:{xiuwei:0,lingli:0,items:[]}, pendingAccumulated:null,
+            enemyAtkReduced:0, enemyAtkReducedDuration:0, playerHitCount:0, startHealUsed:false, deathSaveUsed:false
+        };
+        function openTower(){ document.getElementById("mainScene").style.display="none"; document.getElementById("towerScene").style.display="block"; renderFloorList(); }
+        function closeTower(){ if(battle.inBattle)return; stopAuto(); battle.autoRepeat=false; document.getElementById("towerScene").style.display="none"; document.getElementById("mainScene").style.display="block"; }
+        function renderFloorList(){ let h=""; for(let i=0;i<towerFloors.length;i++){let f=towerFloors[i];let l=i>player.maxLevelUnlocked;let disp=(i===20&&l)?"？？？":f.name;h+=`<button onclick="startBattle(${i})" ${l?'disabled':''}>${disp} ${l?'🔒':''}</button>`;} document.getElementById("levelList").innerHTML=h; }
+        function startBattle(floorIndex, keepHp=false){
+            if(floorIndex>player.maxLevelUnlocked)return; stopAuto();
+            let f=towerFloors[floorIndex]; battle.floorIndex=floorIndex; battle.enemy={...f,maxHp:f.hp};
+            if(!keepHp||battle.playerCurHp<=0)battle.playerCurHp=player.maxHp;
+            battle.enemyCurHp=f.hp; battle.inBattle=true; battle.isDefending=false; battle.locked=false; battle.skillUseCount={}; battle.enemyStunned=false;
+            battle.playerDodgeBuff=null; battle.playerDmgReduceBuff=null; battle.autoMode=false; battle.bossRevealed=false; battle.actionTaken=false;
+            battle.enemyAtkReduced=0; battle.enemyAtkReducedDuration=0; battle.playerHitCount=0; battle.startHealUsed=false; battle.deathSaveUsed=false;
+            if(!keepHp) { battle.accumulated={xiuwei:0,lingli:0,items:[]}; document.getElementById("floatReward").style.display="none"; }
+            document.getElementById("towerScene").style.display="none";
+            document.getElementById("battleFullscreen").classList.add("active");
+            let box=document.getElementById("battleBox");
+            if(f.isBoss){box.classList.add("boss-fight");document.getElementById("enemyName").innerHTML='<span class="boss-name">？？？</span>';}
+            else{box.classList.remove("boss-fight");document.getElementById("enemyName").innerText=f.name;}
+            if(keepHp&&battle.autoRepeat) addBattleLog("--- 继续自动挑战 ---"); else document.getElementById("battleLog").innerHTML=`⚔️战斗开始：${f.isBoss?'？？？':f.name}`;
+            document.getElementById("autoControl").style.display="none";
+            let eq = getEquipEffects(); if(eq.startHeal>0 && !battle.startHealUsed){ battle.playerCurHp = Math.min(player.maxHp, battle.playerCurHp + Math.floor(player.maxHp*eq.startHeal/100)); battle.startHealUsed=true; addBattleLog(`赤银坠：开场恢复${Math.floor(player.maxHp*eq.startHeal/100)}生命`); }
+            updateBattleLingli(); renderSkillButtons(); updateBattleUI(); setBattleButtonsDisabled(false);
+        }
+        function tryExitBattle(){ if(!battle.inBattle){closeBattleUI();return;} if(!battle.actionTaken){battle.inBattle=false;stopAuto();closeBattleUI();}else addBattleLog("已开始战斗，无法退出！"); }
+        function closeBattleUI(){ document.getElementById("battleFullscreen").classList.remove("active"); document.getElementById("towerScene").style.display="block"; renderFloorList(); }
+        function updateBattleLingli(){document.getElementById("battleLingli").innerText=player.lingli;document.getElementById("battleMaxLingli").innerText=player.maxLingli;}
+        function renderSkillButtons(){let h="";player.equippedSkills.forEach(s=>{let d=skillData.find(k=>k.id===s.id);if(!d)return;let u=battle.skillUseCount[s.id]||0;let can=player.lingli>=d.cost&&(d.maxUses===0||u<d.maxUses);h+=`<button class="skill-btn" onclick="playerAction('skill',${s.id})" ${!can?'disabled':''}>${d.name}(${d.cost}灵)${d.maxUses>0?' ['+u+'/'+d.maxUses+']':''}</button>`;}); document.getElementById("skillBtnsContainer").innerHTML=h;}
+        function updateBattleUI(){let eP=(battle.enemyCurHp/battle.enemy.maxHp)*100;document.getElementById("enemyHpBar").style.width=eP+"%";document.getElementById("enemyHpText").innerText=`${formatNum(battle.enemyCurHp)}/${formatNum(battle.enemy.maxHp)}`;let pP=(battle.playerCurHp/player.maxHp)*100;document.getElementById("playerHpBar").style.width=pP+"%";document.getElementById("playerHpText").innerText=`${formatNum(battle.playerCurHp)}/${formatNum(player.maxHp)}`;updateBattleLingli();if(towerFloors[battle.floorIndex].isBoss&&!battle.bossRevealed&&battle.enemyCurHp<battle.enemy.maxHp){battle.bossRevealed=true;document.getElementById("enemyName").innerHTML='<span class="boss-name">开开</span>';addBattleLog("？？？的真名是开开！");}}
+        function setBattleButtonsDisabled(d){document.querySelectorAll('.battle-act-btn,.skill-btn').forEach(b=>b.disabled=d);}
+        function playerAction(type, skillId=null){
+            if(!battle.inBattle||battle.locked)return;
+            battle.actionTaken=true; battle.locked=true; setBattleButtonsDisabled(true);
+            battle.isDefending=false; battle.playerDodgeBuff=null; battle.playerDmgReduceBuff=null;
+            try{
+                if(type==='attack'){
+                    let bar=document.getElementById("enemyHpBar"); bar.classList.add("shake"); setTimeout(()=>bar.classList.remove("shake"),300);
+                    if(Math.random()<Math.min(battle.enemy.dodge||0,0.5)) addBattleLog("敌方闪避了你的攻击");
+                    else {
+                        let baseDmg = Math.max(1, player.atk - battle.enemy.def + Math.random()*5);
+                        let eq = getEquipEffects(); let lbs = levelBonusStats[player.level]||{critRate:0,critDmg:0};
+                        let critRate = Math.min(lbs.critRate + eq.critRate, 50);
+                        let critDmg = Math.min(lbs.critDmg + eq.critDmg, 200);
+                        let isCrit = Math.random()*100 < critRate;
+                        let dmg = isCrit ? Math.floor(baseDmg * (1 + critDmg/100)) : baseDmg;
+                        if(eq.flatDmg>0) dmg += eq.flatDmg;
+                        if(eq.ignoreDef>0) dmg += Math.floor(battle.enemy.def * eq.ignoreDef/100);
+                        if(eq.rageDmg>0 && Math.random()*100 < eq.rageChance){ dmg += eq.rageDmg; addBattleLog("灵器之怒触发！+"+eq.rageDmg+"额外伤害"); }
+                        battle.enemyCurHp = Math.max(0, battle.enemyCurHp - dmg);
+                        let logTxt = `攻击造成${formatNum(dmg)}伤害`; if(isCrit) logTxt += " (暴击！)"; addBattleLog(logTxt);
+                        if(eq.bleed>0 && Math.random()*100 < eq.bleed){ let bleedDmg = Math.floor(player.atk*0.2); battle.enemyCurHp = Math.max(0, battle.enemyCurHp - bleedDmg); addBattleLog(`赤银剑流血：附加${bleedDmg}伤害`); }
+                        battle.playerHitCount++; if(eq.healOnHitCount>0 && battle.playerHitCount % eq.healOnHitCount === 0){ let heal = Math.floor(player.maxHp * eq.healOnHitPercent/100); battle.playerCurHp = Math.min(player.maxHp, battle.playerCurHp + heal); addBattleLog(`灵器坠：攻击回血${heal}`); }
+                        if(eq.reduceEnemyAtk>0 && Math.random()*100 < 8){ battle.enemyAtkReduced = eq.reduceEnemyAtk; battle.enemyAtkReducedDuration = eq.reduceEnemyAtkDuration; addBattleLog(`灵器戒：降低敌人攻击力${eq.reduceEnemyAtk}%，持续${eq.reduceEnemyAtkDuration}回合`); }
+                    }
+                } else if(type==='defend'){ battle.isDefending=true; addBattleLog("进入防御姿态"); }
+                else if(type==='skill'){
+                    let eq = getEquipEffects(); let cost = skillData.find(s=>s.id===skillId)?.cost||0;
+                    if(eq.skillCostReduce>0) cost = Math.floor(cost * (1 - eq.skillCostReduce/100));
+                    let skill=skillData.find(s=>s.id===skillId); if(!skill){battle.locked=false;setBattleButtonsDisabled(false);return;}
+                    let u=battle.skillUseCount[skillId]||0; if(player.lingli<cost||(skill.maxUses>0&&u>=skill.maxUses)){battle.locked=false;setBattleButtonsDisabled(false);return;}
+                    player.lingli-=cost; battle.skillUseCount[skillId]=u+1; skill.effect(battle); renderSkillButtons();
+                }
+            }catch(e){addBattleLog("⚠️ 技能施展失败");battle.locked=false;setBattleButtonsDisabled(false);return;}
+            updateBattleUI();
+            if(battle.enemyCurHp<=0){document.getElementById("enemyHpBar").classList.add("dead");addBattleLog("💥 敌将，讨伐！");setTimeout(battleWin,600);return;}
+            setTimeout(()=>{try{enemyAction();}catch(e){battle.locked=false;setBattleButtonsDisabled(false);}},600);
+        }
+        function enemyAction(){
+            if(!battle.inBattle)return;
+            if(battle.enemyStunned){addBattleLog("敌人被冻结");battle.enemyStunned=false;battle.locked=false;setBattleButtonsDisabled(false);updateBattleUI();return;}
+            let f=towerFloors[battle.floorIndex];
+            if(f.isBoss){
+                if(Math.random() < 0.1){
+                    let dmg = Math.floor(battle.playerCurHp * 0.5);
+                    battle.playerCurHp = Math.max(0, battle.playerCurHp - dmg);
+                    addBattleLog("开开使用了【肘击】！造成"+dmg+"伤害");
+                } else {
+                    let baseDmg = Math.floor(player.maxHp * 0.1);
+                    let isCrit = Math.random()*100 < (f.critRate||0);
+                    let dmg = isCrit ? Math.floor(baseDmg * (1 + (f.critDmg||0)/100)) : baseDmg;
+                    battle.playerCurHp = Math.max(0, battle.playerCurHp - dmg);
+                    let log = `开开攻击造成${dmg}伤害`;
+                    if(isCrit) log += " (暴击！)";
+                    addBattleLog(log);
+                    if(f.bleed > 0 && Math.random()*100 < f.bleed){
+                        let bleedDmg = Math.floor(player.maxHp * 0.15);
+                        battle.playerCurHp = Math.max(0, battle.playerCurHp - bleedDmg);
+                        addBattleLog(`开开的攻击附加流血：-${bleedDmg}HP`);
+                    }
+                }
+            }else{
+                let base=Math.max(1, (f.atk||0) - player.def + Math.random()*4);
+                if(battle.enemyAtkReducedDuration>0){ base = Math.floor(base * (1 - battle.enemyAtkReduced/100)); battle.enemyAtkReducedDuration--; }
+                let isCrit = Math.random()*100 < (f.critRate||0);
+                let dmg = isCrit ? Math.floor(base * (1 + (f.critDmg||0)/100)) : base;
+                let playerReduce = battle.playerDmgReduceBuff!==null?battle.playerDmgReduceBuff:Math.min(player.def/200,0.5);
+                if(battle.isDefending&&battle.playerDmgReduceBuff===null)playerReduce=Math.min(playerReduce+0.2,0.5);
+                let eq = getEquipEffects(); let lbs = levelBonusStats[player.level]||{dmgReduce:0};
+                let totalReduce = Math.min(playerReduce + (f.dmgReduce||0)/100 + eq.dmgReduce/100 + lbs.dmgReduce/100, 0.5);
+                if(eq.lowHpReduce>0 && battle.playerCurHp < player.maxHp*0.5) totalReduce = Math.min(totalReduce + eq.lowHpReduce/100, 0.6);
+                dmg = Math.max(1, Math.floor(dmg * (1 - totalReduce)));
+                let dodgeChance=battle.playerDodgeBuff!==null?battle.playerDodgeBuff:Math.min(0.05+player.def/500,0.5);
+                if(Math.random()<dodgeChance)addBattleLog("你闪避了攻击");
+                else{
+                    battle.playerCurHp=Math.max(0,battle.playerCurHp-dmg);
+                    let logTxt=`受到${formatNum(dmg)}伤害`; if(isCrit) logTxt+=" (暴击！)"; addBattleLog(logTxt);
+                    if(f.bleed>0 && Math.random()*100 < f.bleed){ let bleedDmg = Math.floor(f.atk*0.15); battle.playerCurHp = Math.max(0, battle.playerCurHp - bleedDmg); addBattleLog(`敌方攻击附加流血：-${bleedDmg}HP`); }
+                    if(eq.reflectRate>0 && Math.random()*100 < eq.reflectRate){ let reflectDmg = Math.floor(dmg * eq.reflectPercent/100); battle.enemyCurHp = Math.max(0, battle.enemyCurHp - reflectDmg); addBattleLog(`玄金铠反弹：${reflectDmg}伤害`); }
+                }
+            }
+            battle.playerDodgeBuff=null;battle.playerDmgReduceBuff=null;updateBattleUI();
+            if(battle.playerCurHp>0 && battle.playerCurHp < player.maxHp*0.3){
+                let eq = getEquipEffects(); if(eq.deathSaveHp>0 && !battle.deathSaveUsed){ let heal = Math.floor(player.maxHp * eq.deathSavePercent/100); battle.playerCurHp = Math.min(player.maxHp, battle.playerCurHp + heal); battle.deathSaveUsed=true; addBattleLog(`玄金链：濒死回血${heal}`); }
+            }
+            if(battle.playerCurHp<=0){addBattleLog("💀 你被击败了...");setTimeout(battleLose,600);return;}
+            battle.locked=false;if(!battle.autoMode)setBattleButtonsDisabled(false);
+        }
+        function battleWin(){
+            battle.inBattle=false; battle.locked=false; setBattleButtonsDisabled(true);
+            let f=towerFloors[battle.floorIndex]; let rwd=f.isBoss?f.reward:Math.floor(f.reward*(linggenMultiplier[player.linggen]||1));
+            player.xiuwei=Math.min(player.xiuwei+rwd,player.maxXiuwei); let lr=Math.floor(player.maxLingli*0.1);
+            player.lingli=Math.min(player.lingli+lr,player.maxLingli);
+            if(battle.floorIndex===19)player.maxLevelUnlocked=Math.max(player.maxLevelUnlocked,21);
+            else if(!f.isBoss&&battle.floorIndex+1>player.maxLevelUnlocked)player.maxLevelUnlocked=battle.floorIndex+1;
+            if(!f.isBoss){let rand=Math.random();if(rand<0.4)player.materials[0]++;else if(rand<0.7)player.materials[1]++;else if(rand<0.95)player.materials[2]++;else player.materials[3]++;}
+            let dropMsg='';
+            if(!f.isBoss){ let chance=getEquipDropChance(battle.floorIndex); if(Math.random()<chance){ let possibleParts=allEquipParts.filter(p=>battle.floorIndex>=p.minFloor&&battle.floorIndex<=p.maxFloor); if(possibleParts.length>0){ let part=possibleParts[Math.floor(Math.random()*possibleParts.length)]; if(!player.unlockedEquipParts.includes(part.id)){player.unlockedEquipParts.push(part.id);dropMsg=`🎁 ${part.name}`;addLog(`🎁 掉落装备：${part.name}`);}else{let bonus=80;player.xiuwei+=bonus;dropMsg=`重复部件+${bonus}修为`;addLog(`重复部件转化为${bonus}修为`);}}}}
+            let rewardText=`🎉 击败${f.isBoss?"开开":f.name}！+${rwd}修为 +${lr}灵力 ${dropMsg}`;
+            addBattleLog(rewardText); addLog(rewardText);
+            if(battle.autoRepeat){battle.accumulated.xiuwei+=rwd;battle.accumulated.lingli+=lr;if(dropMsg)battle.accumulated.items.push(dropMsg);updateFloatReward();}
+            else{if(battle.pendingAccumulated){rwd+=battle.pendingAccumulated.xiuwei;lr+=battle.pendingAccumulated.lingli;if(battle.pendingAccumulated.items.length>0)dropMsg+=' '+battle.pendingAccumulated.items.join(' ');battle.pendingAccumulated=null;rewardText=`🎉 击败${f.isBoss?"开开":f.name}！总计+${rwd}修为 +${lr}灵力 ${dropMsg}`;}}
+            updateUI(); saveGame(); updateDailyProgress(2);
+            if(battle.autoRepeat){startBattle(battle.floorIndex,true);startAutoFight();}
+            else if(battle.autoMode){startBattle(battle.floorIndex);startAutoFight();}
+            else{document.getElementById("victoryMsg").innerText=rewardText;document.getElementById("victoryNextBtn").disabled=(battle.floorIndex>=towerFloors.length-1);document.getElementById("victoryModal").style.display="flex";}
+        }
+        function updateFloatReward(){let t=document.getElementById("floatTrackerText");let a=battle.accumulated;if(a.xiuwei>0||a.items.length>0){t.innerText=`修为+${a.xiuwei} 灵力+${a.lingli} ${a.items.length?'装备：'+a.items.join(' '):''}`;document.getElementById("floatReward").style.display="block";}}
+        function battleLose(){
+            battle.inBattle=false; battle.locked=false; setBattleButtonsDisabled(true);
+            let f=towerFloors[battle.floorIndex];
+            if(f.isBoss){addLog("击败开开失败，无损失");addBattleLog("彩蛋BOSS战败无惩罚");}
+            else{let lose=Math.floor(player.xiuwei*0.5);player.xiuwei=Math.max(0,player.xiuwei-lose);addLog(`战斗失败，损失${lose}修为`);addBattleLog(`损失${lose}修为`);}
+            updateUI(); saveGame(); stopAuto(); battle.autoRepeat=false; document.getElementById("autoControl").style.display="none"; document.getElementById("floatReward").style.display="none";
+        }
+        function victoryAction(action){
+            document.getElementById("victoryModal").style.display="none";
+            if(action==='again')startBattle(battle.floorIndex);
+            else if(action==='next'){if(battle.floorIndex<towerFloors.length-1)startBattle(battle.floorIndex+1);}
+            else if(action==='autoRepeat'){battle.autoRepeat=true; startBattle(battle.floorIndex,true); startAutoFight();}
+            else if(action==='close'){closeBattleUI();}
+        }
+        function startAutoFight(){if(!battle.inBattle)return;battle.autoMode=true;setBattleButtonsDisabled(true);document.getElementById("autoControl").style.display="flex";battle.autoTimer=setInterval(()=>{if(!battle.inBattle||!battle.autoMode){clearInterval(battle.autoTimer);return;}if(battle.locked)return;playerAction('attack');},1200);}
+        function stopAuto(){
+            if(battle.accumulated&&(battle.accumulated.xiuwei>0||battle.accumulated.items.length>0)){let summary=`⏸ 自动重复已停止。累积：修为+${battle.accumulated.xiuwei}，灵力+${battle.accumulated.lingli}`;if(battle.accumulated.items.length>0)summary+=`，装备：${battle.accumulated.items.join('，')}`;addBattleLog(summary);addLog(summary);battle.pendingAccumulated={...battle.accumulated};battle.accumulated={xiuwei:0,lingli:0,items:[]};}
+            battle.autoMode=false; battle.autoRepeat=false; if(battle.autoTimer)clearInterval(battle.autoTimer); document.getElementById("autoControl").style.display="none"; document.getElementById("floatReward").style.display="none"; if(battle.inBattle&&!battle.locked)setBattleButtonsDisabled(false);
+        }
+        function initGame(){
+            if(localStorage.getItem('advancedStatsExpanded')==='0'){advancedStatsExpanded=false;document.getElementById('advancedStatsWrapper').classList.add('collapsed');document.getElementById('arrowIcon').classList.add('rotated');}
+            showAnnounceModal();
+            if(!loadGame()){randomLinggen();let a=levelAttr[0];let m=linggenMultiplier[player.linggen]||1;player.maxHp=a.hp;player.hp=a.hp;player.atk=Math.floor(a.atk*m);player.def=Math.floor(a.def*m);player.maxLingli=calcMaxLingli();player.lingli=player.maxLingli;player.skills=[{id:0,name:"吐纳术"}];player.equippedSkills=[{id:0,name:"吐纳术"}];player.materials=[0,0,0,0];player.dailyTasks={date:getTodayStr(),progress:[0,0,0],claimed:false};player.equippedItems={};player.unlockedEquipParts=[];saveGame();}
+            else{if(!player.linggen)randomLinggen();if(!player.skills)player.skills=[];if(!player.equippedSkills)player.equippedSkills=[];if(!player.materials)player.materials=[0,0,0,0];if(!player.dailyTasks)player.dailyTasks={date:getTodayStr(),progress:[0,0,0],claimed:false};if(!player.equippedItems)player.equippedItems={};if(!player.unlockedEquipParts)player.unlockedEquipParts=[];player.maxLingli=calcMaxLingli();if(player.lingli===undefined||player.lingli>player.maxLingli)player.lingli=player.maxLingli;}
+            updateUI(); startNaturalRegen();
+        }
+        initGame();
+    </script>
+</body>
+</html>
